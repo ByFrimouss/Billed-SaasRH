@@ -72,6 +72,8 @@ export default class {
     this.document = document
     this.onNavigate = onNavigate
     this.store = store
+    this.showTicketsState = {} // état d'ouverture de chaque section (pending, accepted, refused)
+
     $('#arrow-icon1').click((e) => this.handleShowTickets(e, bills, 1))
     $('#arrow-icon2').click((e) => this.handleShowTickets(e, bills, 2))
     $('#arrow-icon3').click((e) => this.handleShowTickets(e, bills, 3))
@@ -130,28 +132,41 @@ export default class {
     this.onNavigate(ROUTES_PATH['Dashboard'])
   }
 
-  handleShowTickets(e, bills, index) {
-    if (this.counter === undefined || this.index !== index) this.counter = 0
-    if (this.index === undefined || this.index !== index) this.index = index
-    if (this.counter % 2 === 0) {
-      $(`#arrow-icon${this.index}`).css({ transform: 'rotate(0deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html(cards(filteredBills(bills, getStatus(this.index))))
-      this.counter ++
-    } else {
-      $(`#arrow-icon${this.index}`).css({ transform: 'rotate(90deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html("")
-      this.counter ++
-    }
+          ///////////////////////////////////////////////////
+  ////////// OUVERTURE SIMULTANÉ DES SECTIONS DES TICKETS /////////////
+          //////////////////////////////////////////////////
 
-    bills.forEach(bill => {
-      $(`#open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill, bills))
+handleShowTickets(e, bills, index) {
+  const status = getStatus(index)
+
+  // Initialiser un état propre à chaque statut
+  if (this.showTicketsState === undefined) this.showTicketsState = {}
+  if (this.showTicketsState[status] === undefined) this.showTicketsState[status] = false
+
+  const arrowIcon = $(`#arrow-icon${index}`)
+  const billsContainer = $(`#status-bills-container${index}`)
+
+  // Si la section est fermée → on l’ouvre
+  if (!this.showTicketsState[status]) {
+    arrowIcon.css({ transform: 'rotate(0deg)' })
+    billsContainer.html(cards(filteredBills(bills, status)))
+    this.showTicketsState[status] = true
+  } else {
+    // Si elle est ouverte → on la ferme
+    arrowIcon.css({ transform: 'rotate(90deg)' })
+    billsContainer.html("")
+    this.showTicketsState[status] = false
+  }
+
+  // Rebranche les clics sur les tickets visibles
+  bills
+    .filter(bill => bill.status === status)
+    .forEach(bill => {
+      $(`#open-bill${bill.id}`).off('click').on('click', (e) => this.handleEditTicket(e, bill, bills))
     })
 
-    return bills
-
-  }
+  return bills
+}
 
   getBillsAllUsers = () => {
     if (this.store) {

@@ -1,7 +1,6 @@
 /**
  * @jest-environment jsdom
  */
-
 import LoginUI from "../views/LoginUI";
 import Login from "../containers/Login.js";
 import { ROUTES } from "../constants/routes";
@@ -11,9 +10,10 @@ describe("Given that I am a user on login page", () => {
   let localStorageMock;
 
   beforeEach(() => {
+    // On injecte le HTML de la page login
     document.body.innerHTML = LoginUI();
 
-    // Mock localStorage proprement
+    // Mock du localStorage
     localStorageMock = (() => {
       let store = {};
       return {
@@ -25,18 +25,21 @@ describe("Given that I am a user on login page", () => {
     Object.defineProperty(window, "localStorage", { value: localStorageMock });
   });
 
-  describe("When I do not fill fields and I click on employee button Login In", () => {
-    test("Then it should render Login page", () => {
+  // Test 1 : Formulaire employé soumis vide
+  describe("When I do not fill fields and I click on employee login button", () => {
+    test("Then it should render Login page (reste sur la page)", () => {
       const form = screen.getByTestId("form-employee");
       fireEvent.submit(form);
       expect(screen.getByTestId("form-employee")).toBeTruthy();
     });
   });
 
-  describe("When I fill fields in correct format and I click on employee button Login In", () => {
-    test("Then I should be identified as an Employee in app", async () => {
+  // Test 2 : Employé connecté correctement
+  describe("When I fill fields correctly and I click on employee login button", () => {
+    test("Then I should be identified as an Employee and redirected to Bills page", async () => {
       const inputData = { email: "johndoe@email.com", password: "azerty" };
 
+      // Remplissage des champs
       fireEvent.change(screen.getByTestId("employee-email-input"), {
         target: { value: inputData.email },
       });
@@ -44,10 +47,12 @@ describe("Given that I am a user on login page", () => {
         target: { value: inputData.password },
       });
 
+      // Mock de la navigation
       const onNavigate = (pathname) => {
         document.body.innerHTML = ROUTES({ pathname });
       };
 
+      // Mock du store pour login
       const store = {
         login: jest.fn().mockResolvedValue({ jwt: "fake-jwt" }),
         users: jest.fn(() => ({
@@ -66,6 +71,7 @@ describe("Given that I am a user on login page", () => {
       const form = screen.getByTestId("form-employee");
       fireEvent.submit(form);
 
+      // On attend que localStorage soit mis à jour
       await waitFor(() => {
         expect(window.localStorage.setItem).toHaveBeenCalledWith(
           "user",
@@ -78,13 +84,16 @@ describe("Given that I am a user on login page", () => {
         );
       });
 
-      // Vérifie qu'on navigue vers la page Bills
-      expect(screen.queryByText("Mes notes de frais")).toBeTruthy();
+      // On attend la redirection vers la page Bills
+      await waitFor(() => {
+        expect(screen.getByText("Mes notes de frais")).toBeTruthy();
+      });
     });
   });
 
-  describe("When I fill fields in correct format and I click on admin button Login In", () => {
-    test("Then I should be identified as an HR admin in app", async () => {
+  // Test 3 : Admin connecté correctement
+  describe("When I fill fields correctly and I click on admin login button", () => {
+    test("Then I should be identified as HR Admin and redirected to Dashboard", async () => {
       const inputData = {
         type: "Admin",
         email: "johndoe@email.com",
@@ -121,6 +130,7 @@ describe("Given that I am a user on login page", () => {
       const form = screen.getByTestId("form-admin");
       fireEvent.submit(form);
 
+      // Vérifie que localStorage est bien mis à jour
       await waitFor(() => {
         expect(window.localStorage.setItem).toHaveBeenCalledWith(
           "user",
@@ -128,8 +138,10 @@ describe("Given that I am a user on login page", () => {
         );
       });
 
-      // Vérifie qu'on navigue vers la page Dashboard
-      expect(screen.queryByText("Validations")).toBeTruthy();
+      // Vérifie la redirection vers Dashboard
+      await waitFor(() => {
+        expect(screen.getByText("Validations")).toBeTruthy();
+      });
     });
   });
 });
